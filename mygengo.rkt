@@ -77,13 +77,20 @@
                               "/comments")
                mygengo-user))
 
-(define (get-job job-id mygengo-user [pre-mt 0])
+(define (get-job job-id mygengo-user [pre-mt #f])
   (get-request (string-append "translate/job/"
                               (number->string job-id))
                mygengo-user
-               (if (and pre-mt (= pre-mt 1)) "&pre_mt=1" "")))
+               (if pre-mt "&pre_mt=1" "")))
 
 (define (get-job-group group-id mygengo-user)
   (get-request (string-append "translate/jobs/group/"
                               (number->string group-id))
-               mygengo-user ""))
+               mygengo-user))
+
+(define (get-jobs list-of-job-ids mygengo-user)
+  (get-request (string-append "translate/jobs/"
+                              (string-join 
+                               (map number->string list-of-job-ids) 
+                               ","))
+               mygengo-user))
