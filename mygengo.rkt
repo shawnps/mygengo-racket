@@ -3,38 +3,52 @@
          net/uri-codec
          web-server/stuffers/hmac-sha1
          net/base64
-         openssl/sha1)
+         openssl/sha1
+         (planet dherman/json:4:0))
 
-(define sandbox-url "http://api.sandbox.mygengo.com/v1.1/")
 (struct mygengo (public-key private-key sandbox))
+(define sandbox-url "http://api.sandbox.mygengo.com/v1.1/")
+(define api-base-url "http://api.mygengo.com/v1.1/")
+; the current seconds since UNIX epoch, to be hashed
+; and sent in request as api_sig
 (define current-ts
-  (substring
-   (number->string
-    (/ (current-inexact-milliseconds) 1000))
-   0 10))
+  (number->string
+   (current-seconds)))
 
-(define (params-to-api-sig private-key params)
+(define (hmac-sha1-hex private-key a-string)
   (bytes->hex-string
    (HMAC-SHA1
     (string->bytes/locale private-key)
-    (string->bytes/locale params))))
+    (string->bytes/locale a-string))))
 
 ; do a GET request
 ; example:
-; (get-request sandbox-url "account/stats" someuser)
+; (get-request "account/stats" some-user)
 ; "{\"opstat\":\"ok\",\"response\":{\"user_since\":1320642742,
 ;   \"credits_spent\":\"-1908.52\",\"currency\":\"USD\"}}"
-(define (get-request base-url method mygengo-user)
-  (read-line
+(define (get-request method mygengo-user)
+  (read-json
    (get-pure-port
-    (string->url (string-append base-url
-                                method
-                                "?api_key="
-                                (uri-encode
-                                 (mygengo-public-key mygengo-user))
-                                "&api_sig="
-                                (params-to-api-sig
-                                 (mygengo-private-key mygengo-user)
-                                 current-ts)
-                                "&ts=" current-ts))
+    (create-url method mygengo-user)
     '("Accept:application/json"))))
+
+(define (create-url method mygengo-user)
+  (string->url
+   (string-append
+    (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
+    method
+    "?api_key="
+    (uri-encode (mygengo-public-key mygengo-user))
+    "&api_sig="
+    (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts)
+    "&ts=" current-ts)))
+
+(define (get-account-stats mygengo-user)
+  (get-request "account/stats" mygengo-user))
+
+(define (get-account-balance mygengo-user)
+  (get-request "account/balance" mygengo-user))
+
+(define (get-job-feedback job-id mygengo-user)
+  (get-request (string-append "translate/job/" job-id "/feedback")
+               mygengo-user))
