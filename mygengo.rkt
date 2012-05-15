@@ -24,8 +24,8 @@
 ; do a GET request
 ; example:
 ; (get-request "account/stats" some-user)
-; "{\"opstat\":\"ok\",\"response\":{\"user_since\":1320642742,
-;   \"credits_spent\":\"-1908.52\",\"currency\":\"USD\"}}"
+; '#hasheq((response . #hasheq((user_since . 1320642742)
+;  (credits_spent . "-1908.52") (currency . "USD"))) (opstat . "ok"))
 (define (get-request method mygengo-user [optional-params ""])
   (read-json
    (get-pure-port
