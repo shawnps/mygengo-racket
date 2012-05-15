@@ -26,13 +26,15 @@
 ; (get-request "account/stats" some-user)
 ; "{\"opstat\":\"ok\",\"response\":{\"user_since\":1320642742,
 ;   \"credits_spent\":\"-1908.52\",\"currency\":\"USD\"}}"
-(define (get-request method mygengo-user)
+(define (get-request method mygengo-user [optional-params ""])
   (read-json
    (get-pure-port
-    (create-url method mygengo-user)
+    (create-url method
+                mygengo-user
+                optional-params)
     '("Accept:application/json"))))
 
-(define (create-url method mygengo-user)
+(define (create-url method mygengo-user [optional-params ""])
   (string->url
    (string-append
     (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
@@ -41,7 +43,8 @@
     (uri-encode (mygengo-public-key mygengo-user))
     "&api_sig="
     (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts)
-    "&ts=" current-ts)))
+    "&ts=" current-ts
+    optional-params)))
 
 (define (get-account-stats mygengo-user)
   (get-request "account/stats" mygengo-user))
@@ -49,6 +52,38 @@
 (define (get-account-balance mygengo-user)
   (get-request "account/balance" mygengo-user))
 
-(define (get-job-feedback job-id mygengo-user)
-  (get-request (string-append "translate/job/" job-id "/feedback")
+(define (get-job-preview job-id mygengo-user)
+  (get-request (string-append "translate/job/"
+                              (number->string job-id)
+                              "/preview")
                mygengo-user))
+
+(define (get-job-revision job-id rev-id mygengo-user)
+  (get-request (string-append "translate/job/"
+                              (number->string job-id)
+                              "/revision/"
+                              (number->string rev-id))
+               mygengo-user))
+
+(define (get-job-feedback job-id mygengo-user)
+  (get-request (string-append "translate/job/"
+                              (number->string job-id)
+                              "/feedback")
+               mygengo-user))
+
+(define (get-job-comments job-id mygengo-user)
+  (get-request (string-append "translate/job/"
+                              (number->string job-id)
+                              "/comments")
+               mygengo-user))
+
+(define (get-job job-id mygengo-user [pre-mt 0])
+  (get-request (string-append "translate/job/"
+                              (number->string job-id))
+               mygengo-user
+               (if (and pre-mt (= pre-mt 1)) "&pre_mt=1" "")))
+
+(define (get-job-group group-id mygengo-user)
+  (get-request (string-append "translate/jobs/group/"
+                              (number->string group-id))
+               mygengo-user ""))
