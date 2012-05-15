@@ -115,6 +115,12 @@
                    ","))
    mygengo-user))
 
+(define (get-language-pairs mygengo-user [lc-src ""])
+  (get-request-no-auth
+   "translate/service/language_pairs"
+   mygengo-user
+   (if (> (string-length lc-src) 1) (string-append "&lc_src=" lc-src) "")))
+
 (define (get-languages mygengo-user)
   (get-request-no-auth
    "translate/service/languages"
