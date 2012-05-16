@@ -35,18 +35,38 @@
                 optional-params)
     '("Accept:application/json"))))
 
+(define (post-request method data mygengo-user [optional-params null])
+  (define base-url (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url))
+  (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
+  (define api-sig (car api-sig-and-ts))
+  (define ts (cdr api-sig-and-ts))
+  (read-json
+   (post-pure-port
+    (string->url (string-append base-url method))
+    (string->bytes/locale
+     (alist->form-urlencoded (list
+                              (cons 'api_sig api-sig)
+                              (cons 'api_key (mygengo-public-key mygengo-user))
+                              (cons 'data data)
+                              (cons 'ts ts))))
+    '("Accept:application/json"
+      "Content-Type:application/x-www-form-urlencoded"))))
+
 (define (get-request-auth-required method mygengo-user [optional-params ""])
   (get-request method mygengo-user #t optional-params))
 
 (define (get-request-no-auth method mygengo-user [optional-params ""])
   (get-request method mygengo-user #f optional-params))
 
-(define (api-sig-and-ts auth-required mygengo-user)
-  (if auth-required
-      (format "&api_sig=~a&ts=~a"
-              (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts)
-              current-ts)
-      ""))
+(define (get-api-sig-and-ts mygengo-user)
+  (define hex-digest
+    (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts))
+  (cons hex-digest current-ts))
+
+(define (make-api-sig-and-ts-string api-sig-and-ts)
+  (format "&api_sig=~a&ts=~a"
+          (car api-sig-and-ts)
+          (cdr api-sig-and-ts)))
 
 (define (create-url method mygengo-user auth-required [optional-params ""])
   (string->url
@@ -55,7 +75,9 @@
     method
     "?api_key="
     (uri-encode (mygengo-public-key mygengo-user))
-    (api-sig-and-ts auth-required mygengo-user)
+    (if auth-required
+        (make-api-sig-and-ts-string (get-api-sig-and-ts mygengo-user))
+        "")
     optional-params)))
 
 (define (get-account-stats mygengo-user)
@@ -110,4 +132,12 @@
 (define (get-languages mygengo-user)
   (get-request-no-auth
    "translate/service/languages"
+   mygengo-user))
+
+(define (post-job-comment job-id comment mygengo-user)
+  (define data-hash (make-hash))
+  (hash-set! data-hash 'body comment)
+  (post-request
+   (format "translate/job/~s/comment" job-id)
+   (jsexpr->json data-hash)
    mygengo-user))
