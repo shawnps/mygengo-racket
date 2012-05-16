@@ -67,52 +67,39 @@
 
 (define (get-job-preview job-id mygengo-user)
   (get-request-auth-required
-   (string-append "translate/job/"
-                  (number->string job-id)
-                  "/preview")
+   (format "translate/job/~s/preview" job-id)
    mygengo-user))
 
 (define (get-job-revision job-id rev-id mygengo-user)
   (get-request-auth-required
-   (string-append "translate/job/"
-                  (number->string job-id)
-                  "/revision/"
-                  (number->string rev-id))
+   (format "translate/job/~s/revision/~s" job-id rev-id)
    mygengo-user))
 
 (define (get-job-feedback job-id mygengo-user)
   (get-request-auth-required
-   (string-append "translate/job/"
-                  (number->string job-id)
-                  "/feedback")
+   (format "translate/job/~s/feedback" job-id)
    mygengo-user))
 
 (define (get-job-comments job-id mygengo-user)
   (get-request-auth-required
-   (string-append "translate/job/"
-                  (number->string job-id)
-                  "/comments")
+   (format "translate/job/~s/comments" job-id)
    mygengo-user))
 
 (define (get-job job-id mygengo-user [pre-mt #f])
   (get-request-auth-required
-   (string-append "translate/job/"
-                  (number->string job-id))
+   (format "translate/job/~s" job-id)
    mygengo-user
    (if pre-mt "&pre_mt=1" "")))
 
 (define (get-job-group group-id mygengo-user)
   (get-request-auth-required
-   (string-append "translate/jobs/group/"
-                  (number->string group-id))
+   (format "translate/jobs/group/~s" group-id)
    mygengo-user))
 
 (define (get-jobs list-of-job-ids mygengo-user)
   (get-request-auth-required
-   (string-append "translate/jobs/"
-                  (string-join
-                   (map number->string list-of-job-ids)
-                   ","))
+   (format "translate/jobs/~a"
+           (string-join (map number->string list-of-job-ids) ","))
    mygengo-user))
 
 (define (get-language-pairs mygengo-user [lc-src ""])
