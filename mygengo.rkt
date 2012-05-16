@@ -26,7 +26,7 @@
 ; (get-request "account/stats" some-user)
 ; '#hasheq((response . #hasheq((user_since . 1320642742)
 ;  (credits_spent . "-1908.52") (currency . "USD"))) (opstat . "ok"))
-(define (get-request method mygengo-user auth-required [optional-params ""])
+(define (get-request method mygengo-user auth-required optional-params)
   (read-json
    (get-pure-port
     (create-url method
@@ -43,10 +43,9 @@
 
 (define (api-sig-and-ts auth-required mygengo-user)
   (if auth-required
-      (string-append
-       "&api_sig="
-       (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts)
-       "&ts=" current-ts)
+      (format "&api_sig=~a&ts=~a"
+              (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts)
+              current-ts)
       ""))
 
 (define (create-url method mygengo-user auth-required [optional-params ""])
