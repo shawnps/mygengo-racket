@@ -4,7 +4,8 @@
          web-server/stuffers/hmac-sha1
          net/base64
          openssl/sha1
-         (planet dherman/json:4:0))
+         (planet dherman/json:4:0)
+         racket/draw)
 
 (struct mygengo (public-key private-key sandbox))
 (define sandbox-url "http://api.sandbox.mygengo.com/v1.1/")
@@ -35,20 +36,25 @@
                 optional-params)
     '("Accept:application/json"))))
 
+(define (get-request-jpeg method mygengo-user)
+  (make-object bitmap%
+    (get-pure-port
+     (create-url method mygengo-user #t empty))))
+
 (define (post-request method data mygengo-user [optional-params null])
   (define base-url (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url))
   (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
   (define api-sig (car api-sig-and-ts))
-  (define ts (cdr api-sig-and-ts))
+  (define ts (car (cdr api-sig-and-ts)))
   (read-json
    (post-pure-port
     (string->url (string-append base-url method))
     (string->bytes/locale
      (alist->form-urlencoded (list
-                              (cons 'api_sig api-sig)
+                              api-sig
                               (cons 'api_key (mygengo-public-key mygengo-user))
                               (cons 'data data)
-                              (cons 'ts ts))))
+                              ts)))
     '("Accept:application/json"
       "Content-Type:application/x-www-form-urlencoded"))))
 
@@ -61,24 +67,25 @@
 (define (get-api-sig-and-ts mygengo-user)
   (define hex-digest
     (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts))
-  (cons hex-digest current-ts))
+  (list (cons 'api_sig hex-digest)
+        (cons 'ts current-ts)))
 
-(define (make-api-sig-and-ts-string api-sig-and-ts)
-  (format "&api_sig=~a&ts=~a"
-          (car api-sig-and-ts)
-          (cdr api-sig-and-ts)))
-
-(define (create-url method mygengo-user auth-required [optional-params ""])
+(define (create-url method mygengo-user auth-required [optional-params empty])
+  (define api-sig
+    (if auth-required
+        (car (get-api-sig-and-ts mygengo-user)) empty))
+  (define timestamp
+    (if auth-required
+        (car (cdr (get-api-sig-and-ts mygengo-user))) empty))
   (string->url
    (string-append
     (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
-    method
-    "?api_key="
-    (uri-encode (mygengo-public-key mygengo-user))
-    (if auth-required
-        (make-api-sig-and-ts-string (get-api-sig-and-ts mygengo-user))
-        "")
-    optional-params)))
+    method "?"
+    (alist->form-urlencoded
+     (filter (lambda (x) (pair? x))
+             (list (cons 'api_key (mygengo-public-key mygengo-user))
+                   api-sig timestamp
+                   optional-params))))))
 
 (define (get-account-stats mygengo-user)
   (get-request-auth-required "account/stats" mygengo-user))
@@ -87,7 +94,7 @@
   (get-request-auth-required "account/balance" mygengo-user))
 
 (define (get-job-preview job-id mygengo-user)
-  (get-request-auth-required
+  (get-request-jpeg
    (format "translate/job/~s/preview" job-id)
    mygengo-user))
 
@@ -107,10 +114,12 @@
    mygengo-user))
 
 (define (get-job job-id mygengo-user [pre-mt #f])
+  (define optional-params
+    (if pre-mt (cons 'pre_mt "1") empty))
   (get-request-auth-required
    (format "translate/job/~s" job-id)
    mygengo-user
-   (if pre-mt "&pre_mt=1" "")))
+   optional-params))
 
 (define (get-job-group group-id mygengo-user)
   (get-request-auth-required
@@ -123,11 +132,13 @@
            (string-join (map number->string list-of-job-ids) ","))
    mygengo-user))
 
-(define (get-language-pairs mygengo-user [lc-src ""])
+(define (get-language-pairs mygengo-user [lc-src empty])
+  (define optional-params
+    (if (not (empty? lc-src)) (cons 'lc_src lc-src) empty))
   (get-request-no-auth
    "translate/service/language_pairs"
    mygengo-user
-   (if (> (string-length lc-src) 1) (string-append "&lc_src=" lc-src) "")))
+   optional-params))
 
 (define (get-languages mygengo-user)
   (get-request-no-auth
