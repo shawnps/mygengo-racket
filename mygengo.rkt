@@ -36,13 +36,13 @@
                 optional-params)
     '("Accept:application/json"))))
 
-(define (post-request method data mygengo-user [optional-params null])
+(define (post/put-request post-or-put-pure-port method data mygengo-user [optional-params null])
   (define base-url (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url))
   (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
   (define api-sig (car api-sig-and-ts))
   (define ts (car (cdr api-sig-and-ts)))
   (read-json
-   (post-pure-port
+   (post-or-put-pure-port
     (string->url (string-append base-url method))
     (string->bytes/locale
      (alist->form-urlencoded (list
@@ -63,6 +63,12 @@
   (make-object bitmap%
     (get-pure-port
      (create-url method mygengo-user #t empty))))
+
+(define (post-request method data mygengo-user [optional-params null])
+  (post/put-request post-pure-port method data mygengo-user optional-params))
+
+(define (put-request method data mygengo-user [optional-params null])
+  (post/put-request put-pure-port method data mygengo-user optional-params))
 
 (define (delete-request method mygengo-user)
   (read-json
@@ -165,3 +171,12 @@
   (delete-request
    (format "translate/job/~s" job-id)
    mygengo-user))
+
+(define (revise-job job-id comment mygengo-user)
+  (define data-hash (make-hash))
+  (hash-set! data-hash 'action "revise")
+  (hash-set! data-hash 'comment comment)
+    (put-request
+     (format "translate/job/~s" job-id)
+     (jsexpr->json data-hash)
+     mygengo-user))
