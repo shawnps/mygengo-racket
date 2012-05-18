@@ -22,11 +22,6 @@
     (string->bytes/locale private-key)
     (string->bytes/locale a-string))))
 
-; do a GET request
-; example:
-; (get-request "account/stats" some-user)
-; '#hasheq((response . #hasheq((user_since . 1320642742)
-;  (credits_spent . "-1908.52") (currency . "USD"))) (opstat . "ok"))
 (define (get-request method mygengo-user auth-required optional-params)
   (read-json
    (get-pure-port
@@ -100,6 +95,13 @@
              (list (cons 'api_key (mygengo-public-key mygengo-user))
                    api-sig timestamp
                    optional-params))))))
+
+(define set-put-data
+  (lambda (a-hash param-symbol param) 
+    (if (not (null? param)) 
+        (hash-set! a-hash param-symbol param)
+        null)
+    a-hash))
 
 (define (get-account-stats mygengo-user)
   (get-request-auth-required "account/stats" mygengo-user))
@@ -176,7 +178,34 @@
   (define data-hash (make-hash))
   (hash-set! data-hash 'action "revise")
   (hash-set! data-hash 'comment comment)
-    (put-request
-     (format "translate/job/~s" job-id)
-     (jsexpr->json data-hash)
-     mygengo-user))
+  (put-request
+   (format "translate/job/~s" job-id)
+   (jsexpr->json data-hash)
+   mygengo-user))
+
+(define (approve-job job-id mygengo-user [rating null]
+                     [for-translator null] [for-mygengo null] 
+                     [public 0])
+  (define data-hash (make-hash))
+  (hash-set! data-hash 'action "approve")
+  (set-put-data data-hash 'rating rating)
+  (set-put-data data-hash 'for_translator for-translator)
+  (set-put-data data-hash 'for_mygengo for-mygengo)
+  (set-put-data data-hash 'public public)
+  (put-request 
+   (format "translate/job/~s" job-id)
+   (jsexpr->json data-hash)
+   mygengo-user))
+
+(define (reject-job job-id mygengo-user reason
+                    comment captcha
+                    [follow-up "requeue"])
+  (define data-hash (make-hash))
+  (hash-set! data-hash 'reason reason)
+  (hash-set! data-hash 'comment comment)
+  (hash-set! data-hash 'captcha captcha)
+  (set-put-data data-hash 'follow-up follow-up)
+  (put-request
+   (format "translate/job/~s" job-id)
+   (jsexpr->json data-hash)
+   mygengo-user))
