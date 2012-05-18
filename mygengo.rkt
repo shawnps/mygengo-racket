@@ -36,11 +36,6 @@
                 optional-params)
     '("Accept:application/json"))))
 
-(define (get-request-jpeg method mygengo-user)
-  (make-object bitmap%
-    (get-pure-port
-     (create-url method mygengo-user #t empty))))
-
 (define (post-request method data mygengo-user [optional-params null])
   (define base-url (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url))
   (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
@@ -63,6 +58,19 @@
 
 (define (get-request-no-auth method mygengo-user [optional-params ""])
   (get-request method mygengo-user #f optional-params))
+
+(define (get-request-jpeg method mygengo-user)
+  (make-object bitmap%
+    (get-pure-port
+     (create-url method mygengo-user #t empty))))
+
+(define (delete-request method mygengo-user)
+  (read-json
+   (delete-pure-port
+    (create-url method
+                mygengo-user
+                #t)
+    '("Accept:application/json"))))
 
 (define (get-api-sig-and-ts mygengo-user)
   (define hex-digest
@@ -151,4 +159,9 @@
   (post-request
    (format "translate/job/~s/comment" job-id)
    (jsexpr->json data-hash)
+   mygengo-user))
+
+(define (delete-job job-id mygengo-user)
+  (delete-request
+   (format "translate/job/~s" job-id)
    mygengo-user))
