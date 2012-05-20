@@ -1,0 +1,8 @@
+{
+    "job": {
+        "body_src": "some stuff that i want translated",
+        "lc_src": "en",
+        "lc_tgt": "ja",
+        "tier": "standard"
+    }
+}
