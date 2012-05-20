@@ -137,9 +137,24 @@
    mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-comment-post/
+(define (post-job-comment job-id comment mygengo-user)
+  (define data-hash (make-hash))
+  (hash-set! data-hash 'body comment)
+  (post-request
+   (format "translate/job/~s/comment" job-id)
+   (jsexpr->json data-hash)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-comment-post/
 (define (get-job-comments job-id mygengo-user)
   (get-request-auth-required
    (format "translate/job/~s/comments" job-id)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-delete/
+(define (delete-job job-id mygengo-user)
+  (delete-request
+   (format "translate/job/~s" job-id)
    mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-get/
@@ -150,50 +165,6 @@
    (format "translate/job/~s" job-id)
    mygengo-user
    optional-params))
-
-; http://mygengo.com/api/developer-docs/methods/translate-jobs-group-get/
-(define (get-job-group group-id mygengo-user)
-  (get-request-auth-required
-   (format "translate/jobs/group/~s" group-id)
-   mygengo-user))
-
-; http://mygengo.com/api/developer-docs/methods/translate-jobs-ids-get/
-(define (get-jobs list-of-job-ids mygengo-user)
-  (get-request-auth-required
-   (format "translate/jobs/~a"
-           (string-join (map number->string list-of-job-ids) ","))
-   mygengo-user))
-
-; http://mygengo.com/api/developer-docs/methods/
-;        translate-service-language-pairs-get/
-(define (get-language-pairs mygengo-user [lc-src null])
-  (define optional-params
-    (if (not (null? lc-src)) (cons 'lc_src lc-src) null))
-  (get-request-no-auth
-   "translate/service/language_pairs"
-   mygengo-user
-   optional-params))
-
-; http://mygengo.com/api/developer-docs/methods/translate-service-languages-get/
-(define (get-languages mygengo-user)
-  (get-request-no-auth
-   "translate/service/languages"
-   mygengo-user))
-
-; http://mygengo.com/api/developer-docs/methods/translate-job-id-comment-post/
-(define (post-job-comment job-id comment mygengo-user)
-  (define data-hash (make-hash))
-  (hash-set! data-hash 'body comment)
-  (post-request
-   (format "translate/job/~s/comment" job-id)
-   (jsexpr->json data-hash)
-   mygengo-user))
-
-; http://mygengo.com/api/developer-docs/methods/translate-job-id-delete/
-(define (delete-job job-id mygengo-user)
-  (delete-request
-   (format "translate/job/~s" job-id)
-   mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-put/
 (define (revise-job job-id comment mygengo-user)
@@ -246,6 +217,19 @@
    (jsexpr->json data)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-group-get/
+(define (get-jobs-by-group group-id mygengo-user)
+  (get-request-auth-required
+   (format "translate/jobs/group/~s" group-id)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-ids-get/
+(define (get-jobs-by-ids list-of-job-ids mygengo-user)
+  (get-request-auth-required
+   (format "translate/jobs/~a"
+           (string-join (map number->string list-of-job-ids) ","))
+   mygengo-user))
+
 ; http://mygengo.com/api/developer-docs/methods/translate-jobs-post/
 (define (post-jobs jobs-json mygengo-user [as-group null])
   (define data (read-json (open-input-file jobs-json)))
@@ -253,6 +237,22 @@
   (post-request
    "translate/jobs"
    (jsexpr->json data)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/
+;        translate-service-language-pairs-get/
+(define (get-language-pairs mygengo-user [lc-src null])
+  (define optional-params
+    (if (not (null? lc-src)) (cons 'lc_src lc-src) null))
+  (get-request-no-auth
+   "translate/service/language_pairs"
+   mygengo-user
+   optional-params))
+
+; http://mygengo.com/api/developer-docs/methods/translate-service-languages-get/
+(define (get-languages mygengo-user)
+  (get-request-no-auth
+   "translate/service/languages"
    mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-service-quote-post/
