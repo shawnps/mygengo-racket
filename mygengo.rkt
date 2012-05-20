@@ -22,6 +22,29 @@
     (string->bytes/locale private-key)
     (string->bytes/locale a-string))))
 
+(define (get-api-sig-and-ts mygengo-user)
+  (define hex-digest
+    (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts))
+  (list (cons 'api_sig hex-digest)
+        (cons 'ts current-ts)))
+
+(define (create-url method mygengo-user auth-required [optional-params null])
+  (define api-sig
+    (if auth-required
+        (first (get-api-sig-and-ts mygengo-user)) null))
+  (define timestamp
+    (if auth-required
+        (last (get-api-sig-and-ts mygengo-user)) null))
+  (string->url
+   (string-append
+    (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
+    method "?"
+    (alist->form-urlencoded
+     (filter (lambda (x) (pair? x))
+             (list (cons 'api_key (mygengo-public-key mygengo-user))
+                   api-sig timestamp
+                   optional-params))))))
+
 (define (get-request method mygengo-user auth-required optional-params)
   (read-json
    (get-pure-port
@@ -34,19 +57,27 @@
 (define (post/put-request post-or-put-pure-port method data mygengo-user [optional-params null])
   (define base-url (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url))
   (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
-  (define api-sig (car api-sig-and-ts))
-  (define ts (car (cdr api-sig-and-ts)))
+  (define api-sig (first api-sig-and-ts))
+  (define ts (last api-sig-and-ts))
   (read-json
    (post-or-put-pure-port
     (string->url (string-append base-url method))
     (string->bytes/locale
-     (alist->form-urlencoded (list
-                              api-sig
-                              (cons 'api_key (mygengo-public-key mygengo-user))
-                              (cons 'data data)
-                              ts)))
+     (alist->form-urlencoded
+      (list
+       api-sig ts
+       (cons 'api_key (mygengo-public-key mygengo-user))
+       (cons 'data data))))
     '("Accept:application/json"
       "Content-Type:application/x-www-form-urlencoded"))))
+
+(define (delete-request method mygengo-user)
+  (read-json
+   (delete-pure-port
+    (create-url method
+                mygengo-user
+                #t)
+    '("Accept:application/json"))))
 
 (define (get-request-auth-required method mygengo-user [optional-params ""])
   (get-request method mygengo-user #t optional-params))
@@ -57,44 +88,13 @@
 (define (get-request-jpeg method mygengo-user)
   (make-object bitmap%
     (get-pure-port
-     (create-url method mygengo-user #t empty))))
+     (create-url method mygengo-user #t null))))
 
 (define (post-request method data mygengo-user [optional-params null])
   (post/put-request post-pure-port method data mygengo-user optional-params))
 
 (define (put-request method data mygengo-user [optional-params null])
   (post/put-request put-pure-port method data mygengo-user optional-params))
-
-(define (delete-request method mygengo-user)
-  (read-json
-   (delete-pure-port
-    (create-url method
-                mygengo-user
-                #t)
-    '("Accept:application/json"))))
-
-(define (get-api-sig-and-ts mygengo-user)
-  (define hex-digest
-    (hmac-sha1-hex (mygengo-private-key mygengo-user) current-ts))
-  (list (cons 'api_sig hex-digest)
-        (cons 'ts current-ts)))
-
-(define (create-url method mygengo-user auth-required [optional-params empty])
-  (define api-sig
-    (if auth-required
-        (car (get-api-sig-and-ts mygengo-user)) empty))
-  (define timestamp
-    (if auth-required
-        (car (cdr (get-api-sig-and-ts mygengo-user))) empty))
-  (string->url
-   (string-append
-    (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
-    method "?"
-    (alist->form-urlencoded
-     (filter (lambda (x) (pair? x))
-             (list (cons 'api_key (mygengo-public-key mygengo-user))
-                   api-sig timestamp
-                   optional-params))))))
 
 (define set-put-data
   (lambda (a-hash param-symbol param)
@@ -145,7 +145,7 @@
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-get/
 (define (get-job job-id mygengo-user [pre-mt #f])
   (define optional-params
-    (if pre-mt (cons 'pre_mt "1") empty))
+    (if pre-mt (cons 'pre_mt "1") null))
   (get-request-auth-required
    (format "translate/job/~s" job-id)
    mygengo-user
@@ -166,9 +166,9 @@
 
 ; http://mygengo.com/api/developer-docs/methods/
 ;        translate-service-language-pairs-get/
-(define (get-language-pairs mygengo-user [lc-src empty])
+(define (get-language-pairs mygengo-user [lc-src null])
   (define optional-params
-    (if (not (empty? lc-src)) (cons 'lc_src lc-src) empty))
+    (if (not (null? lc-src)) (cons 'lc_src lc-src) null))
   (get-request-no-auth
    "translate/service/language_pairs"
    mygengo-user
@@ -232,4 +232,33 @@
   (put-request
    (format "translate/job/~s" job-id)
    (jsexpr->json data-hash)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-job-post/
+; Define the job in a separate json file following the specification under
+; "Job Payload - For submissions" here:
+; http://mygengo.com/api/developer-docs/payloads/
+; See single_job_example.json as well.
+(define (post-job job-json mygengo-user)
+  (define data (read-json (open-input-file job-json)))
+  (post-request
+   "translate/job"
+   (jsexpr->json data)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-post/
+(define (post-jobs jobs-json mygengo-user [as-group null])
+  (define data (read-json (open-input-file jobs-json)))
+  (if (not (null? as-group)) (hash-set! data 'as_group 1) null)
+  (post-request
+   "translate/jobs"
+   (jsexpr->json data)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-service-quote-post/
+(define (jobs-quote jobs-json mygengo-user)
+  (define data (read-json (open-input-file jobs-json)))
+  (post-request
+   "translate/service/quote"
+   (jsexpr->json data)
    mygengo-user))
