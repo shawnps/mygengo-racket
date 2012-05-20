@@ -97,38 +97,52 @@
                    optional-params))))))
 
 (define set-put-data
-  (lambda (a-hash param-symbol param) 
-    (if (not (null? param)) 
+  (lambda (a-hash param-symbol param)
+    (if (not (null? param))
         (hash-set! a-hash param-symbol param)
         null)
     a-hash))
 
+; http://mygengo.com/api/developer-docs/methods/account-stats-get/
 (define (get-account-stats mygengo-user)
   (get-request-auth-required "account/stats" mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/account-balance-get/
 (define (get-account-balance mygengo-user)
   (get-request-auth-required "account/balance" mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-preview-get/
 (define (get-job-preview job-id mygengo-user)
   (get-request-jpeg
    (format "translate/job/~s/preview" job-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/
+;        translate-job-id-revision-rev-id-get/
 (define (get-job-revision job-id rev-id mygengo-user)
   (get-request-auth-required
    (format "translate/job/~s/revision/~s" job-id rev-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-revisions-get/
+(define (get-job-revisions job-id mygengo-user)
+  (get-request-auth-required
+   (format "translate/job/~s/revisions" job-id)
+   mygengo-user))
+
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-feedback-get/
 (define (get-job-feedback job-id mygengo-user)
   (get-request-auth-required
    (format "translate/job/~s/feedback" job-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-comment-post/
 (define (get-job-comments job-id mygengo-user)
   (get-request-auth-required
    (format "translate/job/~s/comments" job-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-get/
 (define (get-job job-id mygengo-user [pre-mt #f])
   (define optional-params
     (if pre-mt (cons 'pre_mt "1") empty))
@@ -137,17 +151,21 @@
    mygengo-user
    optional-params))
 
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-group-get/
 (define (get-job-group group-id mygengo-user)
   (get-request-auth-required
    (format "translate/jobs/group/~s" group-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-ids-get/
 (define (get-jobs list-of-job-ids mygengo-user)
   (get-request-auth-required
    (format "translate/jobs/~a"
            (string-join (map number->string list-of-job-ids) ","))
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/
+;        translate-service-language-pairs-get/
 (define (get-language-pairs mygengo-user [lc-src empty])
   (define optional-params
     (if (not (empty? lc-src)) (cons 'lc_src lc-src) empty))
@@ -156,11 +174,13 @@
    mygengo-user
    optional-params))
 
+; http://mygengo.com/api/developer-docs/methods/translate-service-languages-get/
 (define (get-languages mygengo-user)
   (get-request-no-auth
    "translate/service/languages"
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-comment-post/
 (define (post-job-comment job-id comment mygengo-user)
   (define data-hash (make-hash))
   (hash-set! data-hash 'body comment)
@@ -169,11 +189,13 @@
    (jsexpr->json data-hash)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-delete/
 (define (delete-job job-id mygengo-user)
   (delete-request
    (format "translate/job/~s" job-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-put/
 (define (revise-job job-id comment mygengo-user)
   (define data-hash (make-hash))
   (hash-set! data-hash 'action "revise")
@@ -183,8 +205,9 @@
    (jsexpr->json data-hash)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-put/
 (define (approve-job job-id mygengo-user [rating null]
-                     [for-translator null] [for-mygengo null] 
+                     [for-translator null] [for-mygengo null]
                      [public 0])
   (define data-hash (make-hash))
   (hash-set! data-hash 'action "approve")
@@ -192,11 +215,12 @@
   (set-put-data data-hash 'for_translator for-translator)
   (set-put-data data-hash 'for_mygengo for-mygengo)
   (set-put-data data-hash 'public public)
-  (put-request 
+  (put-request
    (format "translate/job/~s" job-id)
    (jsexpr->json data-hash)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-job-id-put/
 (define (reject-job job-id mygengo-user reason
                     comment captcha
                     [follow-up "requeue"])
