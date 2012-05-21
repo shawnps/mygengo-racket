@@ -35,15 +35,17 @@
   (define timestamp
     (if auth-required
         (last (get-api-sig-and-ts mygengo-user)) null))
+  (define api-key
+    `(api_key . ,(mygengo-public-key mygengo-user)))
+  (define param-list
+    (if auth-required
+        (append optional-params (list api-key api-sig timestamp))
+        (list api-key)))
   (string->url
    (string-append
     (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
     method "?"
-    (alist->form-urlencoded
-     (filter (lambda (x) (pair? x))
-             (list (cons 'api_key (mygengo-public-key mygengo-user))
-                   api-sig timestamp
-                   optional-params))))))
+    (alist->form-urlencoded param-list))))
 
 (define (get-request method mygengo-user auth-required optional-params)
   (read-json
@@ -79,10 +81,10 @@
                 #t)
     '("Accept:application/json"))))
 
-(define (get-request-auth-required method mygengo-user [optional-params ""])
+(define (get-request-auth-required method mygengo-user [optional-params null])
   (get-request method mygengo-user #t optional-params))
 
-(define (get-request-no-auth method mygengo-user [optional-params ""])
+(define (get-request-no-auth method mygengo-user [optional-params null])
   (get-request method mygengo-user #f optional-params))
 
 (define (get-request-jpeg method mygengo-user)
@@ -96,7 +98,7 @@
 (define (put-request method data mygengo-user [optional-params null])
   (post/put-request put-pure-port method data mygengo-user optional-params))
 
-(define set-put-data
+(define set-hash-data
   (lambda (a-hash param-symbol param)
     (if (not (null? param))
         (hash-set! a-hash param-symbol param)
@@ -160,7 +162,7 @@
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-get/
 (define (get-job job-id mygengo-user [pre-mt #f])
   (define optional-params
-    (if pre-mt (cons 'pre_mt "1") null))
+    (if pre-mt (list '(pre_mt . "1")) null))
   (get-request-auth-required
    (format "translate/job/~s" job-id)
    mygengo-user
@@ -182,10 +184,10 @@
                      [public 0])
   (define data-hash (make-hash))
   (hash-set! data-hash 'action "approve")
-  (set-put-data data-hash 'rating rating)
-  (set-put-data data-hash 'for_translator for-translator)
-  (set-put-data data-hash 'for_mygengo for-mygengo)
-  (set-put-data data-hash 'public public)
+  (set-hash-data data-hash 'rating rating)
+  (set-hash-data data-hash 'for_translator for-translator)
+  (set-hash-data data-hash 'for_mygengo for-mygengo)
+  (set-hash-data data-hash 'public public)
   (put-request
    (format "translate/job/~s" job-id)
    (jsexpr->json data-hash)
@@ -199,7 +201,7 @@
   (hash-set! data-hash 'reason reason)
   (hash-set! data-hash 'comment comment)
   (hash-set! data-hash 'captcha captcha)
-  (set-put-data data-hash 'follow-up follow-up)
+  (set-hash-data data-hash 'follow-up follow-up)
   (put-request
    (format "translate/job/~s" job-id)
    (jsexpr->json data-hash)
@@ -223,6 +225,24 @@
    (format "translate/jobs/group/~s" group-id)
    mygengo-user))
 
+; http://mygengo.com/api/developer-docs/methods/translate-jobs-get/
+(define (get-jobs mygengo-user [status null]
+                  [timestamp-after null] [count null])
+  (define timestamp-after-string
+    (if (not (null? timestamp-after)) (number->string timestamp-after) null))
+  (define count-string
+    (if (not (null? count)) (number->string count) null))
+  (define optional-params
+    (filter (lambda (x) (not (null? (cdr x))))
+            (list
+             `(status . ,status)
+             `(timestamp_after . ,timestamp-after-string)
+             `(count . ,count-string))))
+  (get-request-auth-required
+   "translate/jobs"
+   mygengo-user
+   optional-params))
+
 ; http://mygengo.com/api/developer-docs/methods/translate-jobs-ids-get/
 (define (get-jobs-by-ids list-of-job-ids mygengo-user)
   (get-request-auth-required
@@ -243,7 +263,7 @@
 ;        translate-service-language-pairs-get/
 (define (get-language-pairs mygengo-user [lc-src null])
   (define optional-params
-    (if (not (null? lc-src)) (cons 'lc_src lc-src) null))
+    (if (not (null? lc-src)) (list (cons 'lc_src lc-src)) null))
   (get-request-no-auth
    "translate/service/language_pairs"
    mygengo-user
