@@ -61,15 +61,17 @@
   (define api-sig-and-ts (get-api-sig-and-ts mygengo-user))
   (define api-sig (first api-sig-and-ts))
   (define ts (last api-sig-and-ts))
+  (define param-list
+    (list api-sig
+          ts
+          `(api_key . ,(mygengo-public-key mygengo-user))
+          `(data . ,data)))
   (read-json
    (post-or-put-pure-port
     (string->url (string-append base-url method))
     (string->bytes/locale
      (alist->form-urlencoded
-      (list
-       api-sig ts
-       (cons 'api_key (mygengo-public-key mygengo-user))
-       (cons 'data data))))
+      param-list))
     '("Accept:application/json"
       "Content-Type:application/x-www-form-urlencoded"))))
 
