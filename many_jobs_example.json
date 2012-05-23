@@ -1,4 +1,5 @@
 {
+    "as_group": 1,
     "jobs": {
         "job_one": {
             "body_src": "some stuff that i want translated",
@@ -7,7 +8,7 @@
             "tier": "standard"
         },
         "job_two": {
-            "body_src": "second thing that i want translated",
+            "body_src": "more stuff that i want translated",
             "lc_src": "en",
             "lc_tgt": "ja",
             "tier": "standard"
