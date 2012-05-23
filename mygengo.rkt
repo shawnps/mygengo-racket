@@ -7,6 +7,12 @@
          (planet dherman/json:4:0)
          racket/draw)
 
+(provide mygengo get-account-stats get-account-balance get-job-preview 
+         get-job-revision get-job-revisions get-job-feedback post-job-comment 
+         get-job-comments delete-job get-job revise-job approve-job
+         reject-job post-job get-jobs-by-group-id get-jobs get-jobs-by-job-ids 
+         post-jobs get-language-pairs get-languages jobs-quote)
+
 (struct mygengo (public-key private-key sandbox))
 (define sandbox-url "http://api.sandbox.mygengo.com/v1.1/")
 (define api-base-url "http://api.mygengo.com/v1.1/")
@@ -198,12 +204,13 @@
 ; http://mygengo.com/api/developer-docs/methods/translate-job-id-put/
 (define (reject-job job-id mygengo-user reason
                     comment captcha
-                    [follow-up "requeue"])
+                    [follow-up null])
   (define data-hash (make-hash))
+  (hash-set! data-hash 'action "reject")
   (hash-set! data-hash 'reason reason)
   (hash-set! data-hash 'comment comment)
   (hash-set! data-hash 'captcha captcha)
-  (set-hash-data data-hash 'follow-up follow-up)
+  (set-hash-data data-hash 'follow_up follow-up)
   (put-request
    (format "translate/job/~s" job-id)
    (jsexpr->json data-hash)
@@ -222,7 +229,7 @@
    mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-jobs-group-get/
-(define (get-jobs-by-group group-id mygengo-user)
+(define (get-jobs-by-group-id group-id mygengo-user)
   (get-request-auth-required
    (format "translate/jobs/group/~s" group-id)
    mygengo-user))
@@ -246,16 +253,15 @@
    optional-params))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-jobs-ids-get/
-(define (get-jobs-by-ids list-of-job-ids mygengo-user)
+(define (get-jobs-by-job-ids list-of-job-ids mygengo-user)
   (get-request-auth-required
    (format "translate/jobs/~a"
            (string-join (map number->string list-of-job-ids) ","))
    mygengo-user))
 
 ; http://mygengo.com/api/developer-docs/methods/translate-jobs-post/
-(define (post-jobs jobs-json mygengo-user [as-group null])
+(define (post-jobs jobs-json mygengo-user)
   (define data (read-json (open-input-file jobs-json)))
-  (if (not (null? as-group)) (hash-set! data 'as_group 1) null)
   (post-request
    "translate/jobs"
    (jsexpr->json data)
