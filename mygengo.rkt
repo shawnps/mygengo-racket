@@ -46,7 +46,7 @@
   (define param-list
     (if auth-required
         (append optional-params (list api-key api-sig timestamp))
-        (list api-key)))
+        (append optional-params (list api-key))))
   (string->url
    (string-append
     (if (mygengo-sandbox mygengo-user) sandbox-url api-base-url)
